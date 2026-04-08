@@ -1,0 +1,51 @@
+name: Deploy Multi-Container App to EC2
+
+on:
+  push:
+    branches:
+      - main  # يتم تفعيل الأتمتة عند الدفع لفرع main
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          # استبدل <your-dockerhub-username> باسم حسابك في دكر هوب
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/lab6-app:latest
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            # الانتقال لمجلد المشروع على EC2 [cite: 46]
+            cd ~/lab8-cicd
+            
+            # جلب آخر التحديثات لملف docker-compose.yml [cite: 47, 52]
+            git pull
+            
+            # جلب أحدث صورة تم رفعها لـ Docker Hub [cite: 48, 53]
+            sudo docker-compose pull
+            
+            # إيقاف الحاويات القديمة وتشغيل Stack الجديد [cite: 49, 50, 53]
+            sudo docker-compose down
+            sudo docker-compose up -d
