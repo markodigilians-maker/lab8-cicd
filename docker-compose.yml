@@ -1,0 +1,19 @@
+version: '3'
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - DB_HOST=db
+    depends_on:
+      - db
+
+  db:
+  image: mongo:latest
+  volumes:
+    - db-data:/data/db
+    - ./init.js:/docker-entrypoint-initdb.d/init.js
+
+volumes:
+  db-data:
